@@ -31,6 +31,14 @@ void VLCMovie::init() {
     isInitialized = true;
 }
 
+bool filenameContainsProtocol (string filename) {
+    if (filename.find("http://") == 0 || filename.find("https://") == 0 )
+        return true;
+    else
+        return false;
+    
+}
+
 void VLCMovie::initializeVLC() {
     //if (!libvlc) {
         cout << "init libvlc" << endl;
@@ -41,7 +49,7 @@ void VLCMovie::initializeVLC() {
 
         int vlc_argc = sizeof(vlc_argv) / sizeof(*vlc_argv);
         libvlc = libvlc_new(vlc_argc, vlc_argv);
-cout << "libvlc: " << libvlc << endl;
+        cout << "libvlc: " << libvlc << endl;
         //libvlc = libvlc_new(0, NULL);
         if (!libvlc) {
             const char *error = libvlc_errmsg();
@@ -57,43 +65,99 @@ cout << "libvlc: " << libvlc << endl;
         aout = aout->p_next;
     }
 
-    m = libvlc_media_new_path(libvlc, filename.c_str());
-    mp = libvlc_media_player_new_from_media(m);
-	//libvlc_audio_output_set(mp, "adummy");
-	libvlc_audio_output_set(mp, "waveout");
-
-    // TODO: libvlc_video_set_format‚Ì‘ã‚í‚è‚Élibvlc_video_set_format_callbacks‚ðŽg‚¤
+    //see: https://wiki.videolan.org/LibVLC_Tutorial
+    //the following line deals with local video files
+    //m = libvlc_media_new_path(libvlc, ofToDataPath(filename).c_str());
+    //the following line deals with video streams
+    //m = libvlc_media_new_location(libvlc, filename.c_str());
+    bool is_url = filenameContainsProtocol(filename);
+    
+    if (is_url)
+        m = libvlc_media_new_location(libvlc, filename.c_str());
+    else
+        m = libvlc_media_new_path(libvlc, ofToDataPath(filename).c_str());
+    
     videoWidth = 0;
     videoHeight = 0;
-  //  libvlc_video_set_callbacks(mp, NULL, NULL, NULL, this);
-  //  libvlc_audio_set_callbacks(mp, NULL, NULL, NULL, NULL, NULL, this);
-  //  libvlc_media_player_play(mp);
-
-  //  while (videoWidth == 0 && videoHeight == 0) {
-  //      if (!libvlc_media_player_will_play(mp))
-  //          return;
-  //      Sleep(100);
-  //      videoWidth = libvlc_video_get_width(mp);
-  //      videoHeight = libvlc_video_get_height(mp);
-		//video_length_ms = libvlc_media_player_get_length(mp);
-  //  }
-  //  libvlc_media_player_stop(mp);
-  //  libvlc_media_player_set_position(mp, 0);
-
-    libvlc_media_parse(m);
-    videoWidth = libvlc_video_get_width(mp);
-    videoHeight = libvlc_video_get_height(mp);
-    video_length_ms = libvlc_media_get_duration(m);
-    cout << video_length_ms << endl;
-
-	cout << "Video: (" << videoWidth << ", " << videoHeight << ")" << endl;
-
-    libvlc_video_set_callbacks(mp, lockForThumbnailStatic, unlockForThumbnailStatic, displayForThumbnailStatic, this);
-    libvlc_video_set_format(mp, "RGBA", videoWidth, videoHeight, videoWidth * 4);
-
-	thumbnailImage.allocate(videoWidth, videoHeight, OF_IMAGE_COLOR_ALPHA);
-
+    /*
+    libvlc_video_set_callbacks(mp, NULL, NULL, NULL, this);
+    libvlc_audio_set_callbacks(mp, NULL, NULL, NULL, NULL, NULL, this);
     libvlc_media_player_play(mp);
+
+    while (videoWidth == 0 && videoHeight == 0) {
+        if (!libvlc_media_player_will_play(mp))
+            return;
+        usleep(10);
+        videoWidth = libvlc_video_get_width(mp);
+        videoHeight = libvlc_video_get_height(mp);
+        video_length_ms = libvlc_media_player_get_length(mp);
+    
+        cout << "Video length: " <<video_length_ms << endl;
+        cout << "Video: (" << videoWidth << ", " << videoHeight << ")" << endl;
+    }
+    
+    libvlc_media_player_stop(mp);
+    libvlc_media_player_set_position(mp, 0);
+    */
+
+    /*
+    //the following lines i did to try to see if i could trigger the libvlc_MediaParsedChanged event
+    //parsing_completed = false;
+    libvlc_media_parse_async(m);
+    
+    
+    //creating en event to wait for the parsing
+    eventManager = libvlc_media_event_manager(m);
+    libvlc_event_attach(eventManager, libvlc_MediaParsedChanged, vlcEventStaticParsing,  this);
+    
+    //waiting parsing to be completed as an event
+    while(!parsing_completed){
+        //cout << "waiting... " << endl;
+        //cout << "   is parsed? " << libvlc_media_is_parsed(m) << endl;
+        usleep(100);
+    }
+    //cout << "parsing concluded!" << endl;
+    */
+    
+    
+    //libvlc_audio_output_set(mp, "adummy");
+    mp = libvlc_media_player_new_from_media(m);
+    libvlc_audio_output_set(mp, "waveout");
+    
+    //start playing
+    libvlc_media_player_play(mp);
+    
+    //wait until width and height are properly loaded
+    while (videoWidth == 0 && videoHeight == 0) {
+        if (!libvlc_media_player_will_play(mp))
+            //cout << "error here! returning!" << endl;
+            return;
+        
+        usleep(10);
+        videoWidth = libvlc_video_get_width(mp);
+        videoHeight = libvlc_video_get_height(mp);
+        video_length_ms = libvlc_media_player_get_length(mp);
+        
+        //use these lines to debuging
+        cout << "Video length: " <<video_length_ms << endl;
+        cout << "Video: (" << videoWidth << ", " << videoHeight << ")" << endl;
+    }
+    
+    //initing basic vars
+    libvlc_video_set_callbacks(mp, lockForThumbnailStatic, unlockForThumbnailStatic, displayForThumbnailStatic, this);
+    libvlc_video_set_callbacks(mp, lockStatic, unlockStatic, displayStatic, this);
+    libvlc_video_set_format(mp, "RGBA", videoWidth, videoHeight, videoWidth * 4);
+    thumbnailImage.allocate(videoWidth, videoHeight, OF_IMAGE_COLOR_ALPHA);
+    
+    //copying part that is not being curretnyl executed
+    libvlc_media_player_stop(mp);
+    libvlc_media_player_set_position(mp, 0);
+    isVLCInitialized = true;
+
+/*
+//made this comment here because it was generating errors! some of this comment was brought to above
+ 
+ 
 #ifdef WIN32
     Sleep(500);
 #else
@@ -114,6 +178,7 @@ cout << "libvlc: " << libvlc << endl;
         usleep(100 * 1000);
 #endif
     }
+    
     libvlc_media_player_stop(mp);
     libvlc_media_player_set_position(mp, 0);
 	//thumbnailImage.reloadTexture();
@@ -131,7 +196,7 @@ cout << "libvlc: " << libvlc << endl;
     eventManager = libvlc_media_player_event_manager(mp);
     libvlc_event_attach(eventManager, libvlc_MediaPlayerEndReached, vlcEventStatic,  this);
 
-    input_item_t *it = m->p_input_item;
+    input_item_t * it = m->p_input_item;
     
     for (int i = 0; i < it->i_es; i++) {
         es_format_t *es = it->es[i];
@@ -145,6 +210,7 @@ cout << "libvlc: " << libvlc << endl;
     }
 
     isVLCInitialized = true;
+*/
 }
 
 void VLCMovie::cleanupVLC() {
@@ -243,6 +309,16 @@ void VLCMovie::vlcEvent(const libvlc_event_t *event) {
     }
 }
 
+//testing the callbacks
+void VLCMovie::vlcEventStaticParsing(const libvlc_event_t *event, void *data) {
+    ((VLCMovie *)data)->vlcEventParsing(event);
+}
+
+void VLCMovie::vlcEventParsing(const libvlc_event_t *event) {
+    cout << "an event happened!" << endl;
+    parsing_completed = true;
+}
+
 //void VLCMovie::play(const void *samples, unsigned int count, int64_t pts) {
 //    //cout << "play: samples=" << samples << " count=" << count << " pts=" << pts << endl;
 //    //soundBuffer.writeBuffer((short *)samples, pts, count * audioChannels);
@@ -260,6 +336,7 @@ void VLCMovie::vlcEvent(const libvlc_event_t *event) {
 
 
 void *VLCMovie::lock(void **p_pixels) {
+   /*
     while (tryUpdate) {
 #ifdef WIN32
         Sleep(10);
@@ -267,6 +344,7 @@ void *VLCMovie::lock(void **p_pixels) {
         usleep(10 * 1000);
 #endif
     }
+    */
     //backImageMutex.lock(10000);
     //imageFlipMutex.lock(10000);
     *p_pixels = backImage->getPixels().getData();
@@ -283,11 +361,13 @@ void VLCMovie::unlock(void *id, void *const *p_pixels) {
 
 void VLCMovie::display(void *id) {
     while (tryUpdate) {
+        /*
 #ifdef WIN32
         Sleep(10);
 #else
         usleep(10 * 1000);
 #endif
+         */
     }
 
     //imageFlipMutex.lock(10000);
@@ -333,8 +413,8 @@ void VLCMovie::updateTexture() {
     isFliped = false;
     imageFlipMutex.unlock();
     tryUpdate = false;
-    //cout << libvlc_video_get_width(mp) << endl;
-    //cout << libvlc_video_get_height(mp) << endl;
+    //cout << "width: " << libvlc_video_get_width(mp) << endl;
+    //cout << "height: " << libvlc_video_get_height(mp) << endl;
 
 }
 

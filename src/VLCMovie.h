@@ -81,6 +81,11 @@ class VLCMovie
     // VLC Event callbacks
     static void vlcEventStatic(const libvlc_event_t *event, void *data);
     void vlcEvent(const libvlc_event_t *event);
+    //for testing event handling
+    static void vlcEventStaticParsing(const libvlc_event_t *event, void *data);
+    void vlcEventParsing (const libvlc_event_t *event);
+    //for testing if parsing is completed
+    bool parsing_completed;
 
 public:
     VLCMovie(string filename);

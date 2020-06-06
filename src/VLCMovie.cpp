@@ -42,8 +42,11 @@ bool filenameContainsProtocol (string filename) {
 void VLCMovie::initializeVLC() {
     //if (!libvlc) {
         cout << "init libvlc" << endl;
+    
+        string pluginsLocation = ofFilePath::getCurrentExeDir() + "lib/vlc/plugins/";
+        setenv("VLC_PLUGIN_PATH", pluginsLocation.c_str(), 1);
+        
         char const *vlc_argv[] = {
-            "--plugin-path=../../../data/",
             "--no-osd"
         };
 

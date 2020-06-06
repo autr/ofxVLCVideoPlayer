@@ -7,6 +7,7 @@ typedef SSIZE_T ssize_t;
 #endif
 #include <vlc/vlc.h>
 #include <memory>
+#include "ofxXmlPoco.h"
 
 // TODO: スタートフレーム、エンドフレーム
 //class VLCMovie : public AbstractMovie, public ofBaseSoundOutput

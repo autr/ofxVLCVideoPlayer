@@ -3,12 +3,16 @@
 
 //--------------------------------------------------------------
 void ofApp::setup(){
+        
+    ofLog::setAutoSpace(true);
+    
+    
     ofBackground(255,255,255);
     ofSetWindowTitle("ofxVLCVideoPlayer example");
     
     ofSetFrameRate(60); // if vertical sync is off, we can go a bit fast... this caps the framerate at 60fps.
     
-    player.loadMovie("test.mp4");
+    player.loadMovie("http://raspberrypi.local:8080/stream/video.h264");
     player.play();
     
 }

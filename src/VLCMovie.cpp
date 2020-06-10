@@ -47,7 +47,8 @@ void VLCMovie::initializeVLC() {
         setenv("VLC_PLUGIN_PATH", pluginsLocation.c_str(), 1);
         
         char const *vlc_argv[] = {
-            "--no-osd"
+            "--no-osd",
+            " --demux h264"
         };
 
         int vlc_argc = sizeof(vlc_argv) / sizeof(*vlc_argv);

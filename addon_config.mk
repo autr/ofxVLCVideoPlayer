@@ -68,6 +68,7 @@ vs:
     ADDON_INCLUDES_EXCLUDE += libs/vlcSrcSrc/include/%
 osx:
 	ADDON_LIBS = libs/vlcSdk/lib/osx/libvlc.dylib
+	ADDON_LIBS += libs/vlcSdk/lib/osx/libvlc.5.dylib
 	ADDON_LIBS += libs/vlcSdk/lib/osx/libvlccore.dylib
 	ADDON_INCLUDES_EXCLUDE = libs/
     ADDON_INCLUDES_EXCLUDE += libs/vlcSdk/include/%
